@@ -6,33 +6,47 @@ const path = require("path");
 const xlsx = require("xlsx");
 const QRCode = require("qrcode");
 const Jimp = require("jimp");
+const logger_service_1 = require("./logger-service");
 /**
- * Class to generate QR codes from an Excel file with optional user column input.
+ * Class to generate QR codes from an Excel file with optional user column input and optional logo input.
  *
  * @param source - The path to the Excel file.
+ * @param logoPath - The path to the logo file
  * @param urlTag - The column header containing the URLs. Defaults to 'LINK'.
  * @param nameTag - The column header containing the names. Defaults to 'CODE'.
  */
 class QRCodeGenerator {
-    constructor(source, urlTag, nameTag) {
+    constructor(source, urlTag, nameTag, logoPath, jobId) {
         this.source = source;
         this.urlTag = urlTag;
         this.nameTag = nameTag;
+        this.logoPath = logoPath;
         this.outputDir = "./qrcodes";
-        const logoFilePath = "D:/brown ion/qcgen-server-dev/src/logo.jpeg"; // Path to your custom logo
+        this.workbook = xlsx.readFile(this.source);
+        this.sheetName = this.workbook.SheetNames[0];
+        this.jobId = jobId || `qr-${Date.now()}`;
+        logger_service_1.logger.startJobLog(this.jobId);
         // Validate and create the output directory
         this.ensureOutputDirectory();
         // Read and process the Excel file
         if (this.readExcel()) {
-            this.generateQRCodes(logoFilePath);
+            // this.generateQRCodes(logoFilePath);
+            this.generateQRCodes();
         }
     }
     /**
      * Ensure the output directory exists.
      */
     ensureOutputDirectory() {
-        if (!fs.existsSync(this.outputDir)) {
-            fs.mkdirSync(this.outputDir);
+        try {
+            if (!fs.existsSync(this.outputDir)) {
+                fs.mkdirSync(this.outputDir);
+                logger_service_1.logger.info(this.jobId, `Created output directory: ${this.outputDir}`);
+            }
+        }
+        catch (error) {
+            logger_service_1.logger.error(this.jobId, "Failed to create output directory", error);
+            throw error;
         }
     }
     /**
@@ -40,23 +54,16 @@ class QRCodeGenerator {
      */
     readExcel() {
         try {
-            const workbook = xlsx.readFile(this.source);
-            const sheetName = workbook.SheetNames[0];
-            this.sheet = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+            this.sheet = xlsx.utils.sheet_to_json(this.workbook.Sheets[this.sheetName]);
+            logger_service_1.logger.info(this.jobId, `Successfully read Excel file with ${this.sheet.length} rows`);
             if (!this.validateColumns()) {
-                console.error(`Error: Specified columns '${this.urlTag}' or '${this.nameTag}' do not exist in the provided Excel file.`);
+                logger_service_1.logger.error(this.jobId, `Invalid columns: '${this.urlTag}' or '${this.nameTag}' not found`);
                 return false;
             }
-            // Find the actual column names (case-insensitive)
-            const sampleRow = this.sheet[0];
-            const columnNames = Object.keys(sampleRow);
-            // Find the actual column matching the input tags (case-insensitive)
-            this.urlTag = columnNames.find((col) => col.trim().toLowerCase() === this.urlTag.trim().toLowerCase());
-            this.nameTag = columnNames.find((col) => col.trim().toLowerCase() === this.nameTag.trim().toLowerCase());
             return true;
         }
         catch (error) {
-            console.error("Error reading Excel file:", error);
+            logger_service_1.logger.error(this.jobId, "Failed to read Excel file", error);
             return false;
         }
     }
@@ -89,24 +96,58 @@ class QRCodeGenerator {
     /**
      * Generates QR codes with an optional logo for each row in the Excel file.
      */
-    generateQRCodes(logoFilePath) {
-        this.sheet.forEach(async (row, index) => {
+    async generateQRCodes() {
+        logger_service_1.logger.info(this.jobId, "Starting QR code generation");
+        for (const [index, row] of this.sheet.entries()) {
             const link = row[this.urlTag];
             const name = row[this.nameTag];
             if (link && name) {
-                // Create a safe filename from the URL
                 const sanitizedName = this.sanitizeFilename(name);
                 try {
-                    await this.generateQRCodeWithLogo(link, sanitizedName, logoFilePath);
+                    if (this.logoPath) {
+                        await this.generateQRCodeWithLogo(link, sanitizedName, this.logoPath);
+                        logger_service_1.logger.info(this.jobId, `Generated QR code with logo for ${name}`);
+                    }
+                    else {
+                        await this.generateBasicQRCode(link, sanitizedName);
+                        logger_service_1.logger.info(this.jobId, `Generated basic QR code for ${name}`);
+                    }
                 }
                 catch (error) {
-                    console.error(`Failed to generate QR code for row ${index + 1}:`, error);
+                    logger_service_1.logger.error(this.jobId, `Failed to generate QR code for ${name}`, error);
                 }
             }
             else {
-                console.error(`Invalid data in row ${index + 1}: Missing '${this.urlTag}'.`);
+                logger_service_1.logger.warn(this.jobId, `Invalid data in row ${index + 1}`, {
+                    link,
+                    name,
+                });
             }
-        });
+        }
+        logger_service_1.logger.info(this.jobId, "Completed QR code generation");
+    }
+    getJobId() {
+        return this.jobId;
+    }
+    getJobLogs() {
+        return logger_service_1.logger.getJobLogs(this.jobId);
+    }
+    //generate the basic qr code if the user has not given their logo as the input
+    async generateBasicQRCode(link, name) {
+        try {
+            // Generate basic QR code without logo
+            const qrCodeBuffer = await QRCode.toBuffer(link, {
+                errorCorrectionLevel: "H",
+                width: 500,
+            });
+            // Save the QR code
+            const outputFilePath = path.join(this.outputDir, `${name}.png`);
+            await fs.promises.writeFile(outputFilePath, qrCodeBuffer);
+            console.log(`Basic QR Code for '${name}' saved to '${outputFilePath}'`);
+        }
+        catch (error) {
+            console.error(`Error generating basic QR code for '${name}':`, error);
+        }
     }
     /**
      * Sanitizes a filename to be safe for file system
@@ -125,7 +166,7 @@ class QRCodeGenerator {
     async generateQRCodeWithLogo(link, name, logoPath) {
         try {
             // Generate the QR code as a buffer
-            const qrCodeBuffer = await QRCode.toBuffer(name, {
+            const qrCodeBuffer = await QRCode.toBuffer(link, {
                 errorCorrectionLevel: "H",
                 width: 500,
             });
@@ -140,12 +181,12 @@ class QRCodeGenerator {
             // Composite the logo onto the QR code
             qrImage.composite(logo, xPos, yPos);
             // Save the QR code as a file
-            const outputFilePath = path.join(this.outputDir, `${link}.png`);
+            const outputFilePath = path.join(this.outputDir, `${name}.png`);
             await qrImage.writeAsync(outputFilePath);
             console.log(`QR Code for '${name}' saved to '${outputFilePath}'`);
         }
         catch (error) {
-            console.error(`Error generating QR code for '${link}':`, error);
+            console.error(`Error generating QR code for '${name}':`, error);
         }
     }
     getOutputDirectory() {
