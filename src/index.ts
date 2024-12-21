@@ -2,20 +2,14 @@ import express, { Request, Response } from "express";
 import multer, { FileFilterCallback } from "multer";
 import { QRCodeGenerationQueue } from "./queue.service";
 import { ParsedQs } from "qs";
-import { existsSync, mkdirSync, unlinkSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { fileCleanupService } from "./file-cleanup-service";
 import { logger } from "./logger-service";
 import xlsx from "xlsx";
-import path from "path";
 
 const app = express();
 const qrCodeQueue = new QRCodeGenerationQueue();
 
-// Existing upload configuration remains the same...
-// const uploadDir = "./uploads";
-// if (!existsSync(uploadDir)) {
-//   mkdirSync(uploadDir);
-// }
 const uploadDir = "./uploads";
 const logoDir = "./logos";
 [uploadDir, logoDir].forEach((dir) => {
@@ -24,10 +18,6 @@ const logoDir = "./logos";
   }
 });
 
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => cb(null, uploadDir),
-//   filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
-// });
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     // Store logos in the logos subdirectory
@@ -41,23 +31,6 @@ const storage = multer.diskStorage({
     cb(null, `${uniqueSuffix}-${file.originalname}`);
   },
 });
-
-// const fileFilter = (
-//   req: Request,
-//   file: Express.Multer.File,
-//   cb: FileFilterCallback
-// ) => {
-//   if (
-//     file.mimetype ===
-//       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
-//     file.mimetype === "application/vnd.ms-excel" ||
-//     file.mimetype === "text/csv"
-//   ) {
-//     cb(null, true);
-//   } else {
-//     cb(new Error("Only Excel and csv files are allowed!"));
-//   }
-// };
 
 const fileFilter = (
   req: Request,
@@ -103,67 +76,6 @@ const upload = multer({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// app.post(
-//   "/generate",
-//   upload.single("file"),
-//   async (req: Request, res: Response): Promise<void> => {
-//     try {
-//       // Ensure the file exists
-//       if (!req.file) {
-//         res.status(400).json({ error: "No Excel file uploaded." });
-//         return;
-//       }
-
-//       const filePath: string = req.file.path;
-//       const query: ParsedQs = req.body;
-
-//       // Optional user-specified column names
-//       const urlTag: string = (query.urlTag as string) || "CODE";
-//       const nameTag: string = (query.nameTag as string) || "LINK";
-
-//       // Read the Excel file to check row count
-//       const workbook = xlsx.readFile(filePath);
-//       const sheetName = workbook.SheetNames[0];
-//       const sheet = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
-
-//       // Check row count limit
-//       const MAX_ROWS = 200;
-//       if (sheet.length > MAX_ROWS) {
-//         // Clean up the uploaded file
-//         unlinkSync(filePath);
-
-//         res.status(400).json({
-//           error: `Excel file exceeds maximum allowed rows. Only ${MAX_ROWS} rows are permitted.`,
-//           currentRowCount: sheet.length,
-//           maxAllowedRows: MAX_ROWS,
-//         });
-//         return;
-//       }
-
-//       // Enqueue the job for QR code generation
-//       const result = await qrCodeQueue.enqueue({
-//         filePath,
-//         urlTag,
-//         nameTag,
-//       });
-
-//       // Clean up the uploaded file after processing
-//       unlinkSync(filePath);
-
-//       // Respond to the client
-//       res.status(200).json({
-//         message: "QR code generation queued successfully!",
-//         jobDetails: result,
-//       });
-//     } catch (error) {
-//       console.error("Error during QR code generation:", error);
-//       res
-//         .status(500)
-//         .json({ error: "Internal server error while generating QR codes." });
-//     }
-//   }
-// );
-
 app.post(
   "/generate",
   upload.fields([
@@ -176,11 +88,6 @@ app.post(
     try {
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-      // Check for Excel file
-      // if (!files.file || !files.file[0]) {
-      //   res.status(400).json({ error: "No Excel file uploaded." });
-      //   return;
-      // }
       if (!files.file || !files.file[0]) {
         logger.error(jobId, "No Excel file uploaded");
         res.status(400).json({
@@ -200,58 +107,6 @@ app.post(
       const urlTag: string = (query.urlTag as string) || "LINK";
       const nameTag: string = (query.nameTag as string) || "CODE";
 
-      // // Read the Excel file to check row count
-      // const workbook = xlsx.readFile(filePath);
-      // const sheetName = workbook.SheetNames[0];
-      // const sheet = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
-      // logger.info(jobId, "Excel file read successfully", {
-      //   rowCount: sheet.length,
-      // });
-
-      // // Check row count limit
-      // const MAX_ROWS = 200;
-      // if (sheet.length > MAX_ROWS) {
-      //   logger.error(jobId, "Excel file exceeds maximum allowed rows", {
-      //     currentRows: sheet.length,
-      //     maxAllowed: MAX_ROWS,
-      //   });
-      //   res.status(400).json({
-      //     error: `Excel file exceeds maximum allowed rows. Only ${MAX_ROWS} rows are permitted.`,
-      //     currentRowCount: sheet.length,
-      //     maxAllowedRows: MAX_ROWS,
-      //     jobId,
-      //     logs: logger.getJobLogs(jobId),
-      //   });
-      //   return;
-      // }
-
-      // // Register files for cleanup
-      // const fileId = fileCleanupService.registerFile(filePath);
-      // let logoId: string | undefined;
-      // if (logoPath) {
-      //   logoId = fileCleanupService.registerFile(logoPath);
-      //   logger.info(jobId, "Files registered for cleanup", { fileId, logoId });
-      // }
-
-      // // Enqueue the job for QR code generation
-      // const result = await qrCodeQueue.enqueue({
-      //   filePath,
-      //   urlTag,
-      //   nameTag,
-      //   logoPath,
-      //   jobId,
-      // });
-
-      // logger.info(jobId, "Job queued successfully");
-      // // Respond to the client
-      // res.status(200).json({
-      //   message: "QR code generation queued successfully!",
-      //   fileId,
-      //   logoId,
-      //   jobId,
-      //   jobDetails: result,
-      //   logs: logger.getJobLogs(jobId),
-      // });
       try {
         const workbook = xlsx.readFile(filePath);
         const sheetName = workbook.SheetNames[0];

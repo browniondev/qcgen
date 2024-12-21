@@ -92,11 +92,6 @@ export class QRCodeGenerationQueue {
         }
       );
 
-      // worker.on("message", (result) => {
-      //   job.resolve(result);
-      //   this.releaseWorker();
-      // });
-
       worker.on("message", (result) => {
         logger.info(job.jobId, "Worker thread completed", result);
         job.resolve({
@@ -105,11 +100,6 @@ export class QRCodeGenerationQueue {
         });
         this.releaseWorker(job.jobId);
       });
-
-      // worker.on("error", (error) => {
-      //   job.reject(error);
-      //   this.releaseWorker();
-      // });
 
       worker.on("error", (error) => {
         logger.error(job.jobId, "Worker thread error", error);
@@ -120,13 +110,6 @@ export class QRCodeGenerationQueue {
         });
         this.releaseWorker(job.jobId);
       });
-
-      // worker.on("exit", (code) => {
-      //   if (code !== 0) {
-      //     job.reject(new Error(`Worker stopped with exit code ${code}`));
-      //   }
-      //   this.releaseWorker();
-      // });
 
       worker.on("exit", (code) => {
         if (code !== 0) {
