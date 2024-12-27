@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const worker_threads_1 = require("worker_threads");
-const qrgenerator_service_1 = require("./qrgenerator.service");
-const logger_service_1 = require("./logger.service");
+const qrgenerator_service_1 = require("../services/qrgenerator.service");
+const logger_service_1 = require("../services/logger.service");
 async function generateQRCodes() {
     const { filePath, urlTag, nameTag, logoPath, jobId } = worker_threads_1.workerData;
     try {

@@ -1,6 +1,6 @@
 import { Worker } from "worker_threads";
 import { EventEmitter } from "events";
-import { logger } from "./logger-service";
+import { logger } from "./logger.service";
 import path from "path";
 
 interface QRGenerationJob {
@@ -80,7 +80,7 @@ export class QRCodeGenerationQueue {
     try {
       console.log(job.logoPath);
       const worker = new Worker(
-        path.resolve(__dirname, "qr-generation-worker.js"),
+        path.resolve(__dirname, "../workers/qr-generation-worker.js"),
         {
           workerData: {
             filePath: job.filePath,

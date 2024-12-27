@@ -3,7 +3,7 @@ const path = require("path");
 const xlsx = require("xlsx");
 const QRCode = require("qrcode");
 const Jimp = require("jimp");
-import { logger } from "./logger-service";
+import { logger } from "./logger.service";
 
 /**
  * Class to generate QR codes from an Excel file with optional user column input and optional logo input.

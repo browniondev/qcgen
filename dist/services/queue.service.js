@@ -60,7 +60,7 @@ class QRCodeGenerationQueue {
         // Create a new worker thread for this job
         try {
             console.log(job.logoPath);
-            const worker = new worker_threads_1.Worker(path_1.default.resolve(__dirname, "qr-generation-worker.js"), {
+            const worker = new worker_threads_1.Worker(path_1.default.resolve(__dirname, "../workers/qr-generation-worker.js"), {
                 workerData: {
                     filePath: job.filePath,
                     urlTag: job.urlTag,
