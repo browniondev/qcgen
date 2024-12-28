@@ -1,4 +1,4 @@
-// src/controllers/qrController.ts
+// src/controllers/qr.controller.ts
 import { Request, Response } from "express";
 import xlsx from "xlsx";
 import { fileCleanupService } from "../services/file-cleanup.service";
@@ -13,6 +13,7 @@ export const generateQRCode = async (
   req: Request,
   res: Response
 ): Promise<void> => {
+  console.log("request received");
   const jobId = `job-${Date.now()}`;
   logger.startJobLog(jobId);
 
@@ -70,7 +71,8 @@ export const generateQRCode = async (
     logger.info(jobId, "Job queued successfully");
 
     res.status(200).json({
-      message: "QR code generation queued successfully!",
+      message:
+        "QR code generation queued successfully and they will be downloaded shortly!",
       jobId,
       jobDetails: result,
       logs: logger.getJobLogs(jobId),

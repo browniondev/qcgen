@@ -181,9 +181,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // });
 // src/index.ts
 const app_1 = __importDefault(require("./app"));
+const mongoose_1 = __importDefault(require("mongoose"));
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 const port = process.env.PORT || 3000;
-app_1.default.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}`);
+const MONGODB_URI = process.env.MONGODB_URI;
+mongoose_1.default
+    .connect(MONGODB_URI)
+    .then(() => {
+    console.log("Connected to MongoDB successfully");
+    // Start the server only after DB connection is established
+    app_1.default.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+    });
+})
+    .catch((error) => {
+    console.error("MongoDB connection error:", error);
+    process.exit(1);
 });

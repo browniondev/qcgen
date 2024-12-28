@@ -1,3 +1,4 @@
+//src/services/queue.service.ts
 import { Worker } from "worker_threads";
 import { EventEmitter } from "events";
 import { logger } from "./logger.service";

@@ -196,12 +196,25 @@
 
 // src/index.ts
 import app from "./app";
+import mongoose from "mongoose";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const port = process.env.PORT || 3000;
+const MONGODB_URI = process.env.MONGODB_URI;
 
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+mongoose
+  .connect(MONGODB_URI)
+  .then(() => {
+    console.log("Connected to MongoDB successfully");
+
+    // Start the server only after DB connection is established
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+  })
+  .catch((error) => {
+    console.error("MongoDB connection error:", error);
+    process.exit(1);
+  });

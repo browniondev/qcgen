@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.QRCodeGenerationQueue = void 0;
+//src/services/queue.service.ts
 const worker_threads_1 = require("worker_threads");
 const events_1 = require("events");
 const logger_service_1 = require("./logger.service");

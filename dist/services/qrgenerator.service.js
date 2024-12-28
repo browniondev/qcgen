@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.QRCodeGenerator = void 0;
+//src/qrgenerator.service.ts
 const fs = require("fs");
 const path = require("path");
 const xlsx = require("xlsx");

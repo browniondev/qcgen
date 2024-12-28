@@ -1,7 +1,7 @@
 // src/routes/qrRoutes.ts
 import { Router } from "express";
 import multer from "multer";
-import { generateQRCode } from "../controllers/qrController";
+import { generateQRCode } from "../controllers/qr.controller";
 import { existsSync, mkdirSync } from "fs";
 const router = Router();
 

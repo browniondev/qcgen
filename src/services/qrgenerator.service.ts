@@ -1,3 +1,4 @@
+//src/qrgenerator.service.ts
 const fs = require("fs");
 const path = require("path");
 const xlsx = require("xlsx");
@@ -156,6 +157,7 @@ export class QRCodeGenerator {
         });
       }
     }
+    
 
     logger.info(this.jobId, "Completed QR code generation");
   }

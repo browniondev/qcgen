@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+//workers/qr-generation-worker.ts
 const worker_threads_1 = require("worker_threads");
 const qrgenerator_service_1 = require("../services/qrgenerator.service");
 const logger_service_1 = require("../services/logger.service");
