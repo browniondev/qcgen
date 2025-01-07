@@ -64,7 +64,7 @@ export class AuthController {
         res.status(400).json({ errors: errors.array() });
         return;
       }
-
+      console.log(req.body);
       const { email, password } = req.body;
 
       // Check if user exists
@@ -114,6 +114,7 @@ export class AuthController {
       // Redirect to client with token
       // In production, you might want to use a more secure method
       res.redirect(`${CLIENT_URL}/auth/callback?token=${token}`);
+      // res.redirect(`${CLIENT_URL}/`);
     } catch (error) {
       console.error("Google auth callback error:", error);
       res.redirect(`${CLIENT_URL}/login?error=auth_failed`);
