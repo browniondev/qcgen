@@ -33,4 +33,12 @@ app.use(passport_config_1.default.session());
 // Routes
 app.use("/api/auth", auth_routes_1.default);
 app.use("/api/qr", qr_routes_1.default);
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({
+        message: "Something went wrong!",
+        error: process.env.NODE_ENV === "development" ? err.message : undefined,
+    });
+});
 exports.default = app;
