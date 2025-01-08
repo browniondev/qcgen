@@ -92,6 +92,12 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
+  signup: (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string
+  ) => Promise<void>;
   logout: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
 }
@@ -159,7 +165,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         sameSite: "strict",
       });
 
-      Cookies.set("userEmail", data.user.email, {
+      setUser({
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.name,
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    }
+  };
+
+  const signup = async (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string
+  ) => {
+    try {
+      const response = await fetch("http://localhost:3000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, firstName, lastName }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message);
+      }
+
+      const data = await response.json();
+
+      // Store authentication data in cookies
+      // js-cookie automatically handles encoding/decoding of values
+      Cookies.set("token", data.token, {
+        expires: 30, // 30 days
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+      });
+
+      Cookies.set("userId", data.user.id, {
         expires: 30,
         path: "/",
         secure: process.env.NODE_ENV === "production",
@@ -172,7 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         name: data.user.name,
       });
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("signup error:", error);
       throw error;
     }
   };
@@ -199,7 +245,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loginWithGoogle }}>
+    <AuthContext.Provider
+      value={{ user, login, logout, loginWithGoogle, signup }}
+    >
       {children}
     </AuthContext.Provider>
   );

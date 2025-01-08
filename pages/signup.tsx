@@ -16,7 +16,7 @@ export default function SignUp() {
     password: "",
   });
   const [error, setError] = useState("");
-  // const { signUp, signUpWithGoogle } = useAuth();
+  const { signup, loginWithGoogle } = useAuth();
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,7 +31,12 @@ export default function SignUp() {
     e.preventDefault();
     setError("");
     try {
-      // await signUp(formData);
+      await signup(
+        formData.email,
+        formData.password,
+        formData.firstName,
+        formData.lastName
+      );
       router.push("/");
     } catch (error) {
       console.error("Sign up error:", error);
@@ -41,7 +46,7 @@ export default function SignUp() {
 
   const handleGoogleSignUp = async () => {
     try {
-      // await signUpWithGoogle();
+      await loginWithGoogle();
       router.push("/");
     } catch (error) {
       console.error("Google sign up error:", error);
