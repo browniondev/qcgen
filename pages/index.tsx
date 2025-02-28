@@ -238,26 +238,59 @@ import {
   LinkIcon,
 } from "@/components/component/qrgen-landing";
 import Link from "next/link";
+import { useAuth } from "../contexts/AuthContext";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { generateQR } from "@/lib/generate-qr";
+import { generateQR, generateSingleQR } from "@/lib/generate-qr";
 // import { useFormStatus } from "react-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Home() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [result, setResult] = useState<{
     success?: boolean;
     error?: string;
     data?: any;
   } | null>(null);
+  const [qrCodeImage, setQRCodeImage] = useState<string | null>(null);
 
-  async function handleSubmit(formData: FormData, e: any) {
+  // async function handleSubmit(formData: FormData, e: any) {
+  //   e.preventDefault();
+  //   const response = await generateQR(formData);
+  //   setResult(response);
+  // }
+
+  async function handleSubmit(
+    formData: FormData,
+    e: React.FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault();
-    const response = await generateQR(formData);
-    setResult(response);
+    if (!user) {
+      // If user is not authenticated, only allow single QR code generation
+      const url = formData.get("url") as string;
+      if (!url) {
+        setResult({
+          success: false,
+          error: "Please enter a URL or text for the QR code.",
+        });
+        return;
+      }
+      const response = await generateSingleQR(url);
+      setResult(response);
+      if (response.success && response.data) {
+        setQRCodeImage(response.data);
+      }
+    } else {
+      // If user is authenticated, allow Excel file upload
+      const response = await generateQR(formData);
+      setResult(response);
+    }
   }
+
   return (
     <div className="w-full min-h-screen bg-background text-foreground">
       <header className="fixed top-0 z-10 w-full mt-4">
@@ -291,12 +324,27 @@ export default function Home() {
             >
               Contact
             </Link>
-            <Button
+            {/* <Button
               variant="outline"
               className="rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 font-bold uppercase"
             >
               Sign In
-            </Button>
+            </Button> */}
+            {user ? (
+              <Button
+                onClick={() => router.push("/profile")}
+                className="rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 font-bold uppercase"
+              >
+                Profile
+              </Button>
+            ) : (
+              <Button
+                onClick={() => router.push("/signin")}
+                className="rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 font-bold uppercase"
+              >
+                Sign In
+              </Button>
+            )}
           </div>
         </nav>{" "}
         <div className="fixed top-0 left-0 w-full h-full bg-background/50 backdrop-blur-lg z-20 flex flex-col items-center justify-center md:hidden">
@@ -336,12 +384,29 @@ export default function Home() {
                   Contact
                 </Link>
               </div>
-              <Button
+              {/* <Button
                 variant="outline"
                 className="rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 font-bold uppercase w-full"
               >
                 Sign In
-              </Button>
+              </Button> */}
+              {user ? (
+                <Button
+                  onClick={() => router.push("/profile")}
+                  className="rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 font-bold uppercase w-full"
+                  variant="outline"
+                >
+                  Profile
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => router.push("/signin")}
+                  className="rounded-full bg-gradient-to-r from-orange-400 to-yellow-400 font-bold uppercase w-full text-white"
+                  variant="outline"
+                >
+                  Sign In
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -351,11 +416,14 @@ export default function Home() {
           <div className="grid gap-8 md:grid-cols-2 md:gap-12">
             <div className="space-y-4">
               <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                Generate QR Codes from Excel
+                {user
+                  ? "Generate QR Codes from Excel"
+                  : "Generate a Single QR Code"}
               </h1>
               <p className="text-muted-foreground md:text-lg">
-                Upload an Excel file or enter a URL, and we&apos;ll generate QR
-                codes for you.
+                {user
+                  ? "Upload an Excel file or enter a URL, and we'll generate QR codes for you."
+                  : "Enter a URL or text, and we'll generate a QR code for you."}
               </p>
               <form
                 className="space-y-4"
@@ -363,7 +431,7 @@ export default function Home() {
                   handleSubmit(new FormData(e.target as HTMLFormElement), e)
                 }
               >
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label htmlFor="file">Excel File (Required)</Label>
                   <Input
                     id="file"
@@ -399,9 +467,61 @@ export default function Home() {
                     type="text"
                     placeholder="Enter name column"
                   />
-                </div>
+                </div> */}
+                {user ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="file">Excel File (Required)</Label>
+                      <Input
+                        id="file"
+                        type="file"
+                        name="file"
+                        accept=".xlsx,.xls"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="logo">Logo</Label>
+                      <Input
+                        id="logo"
+                        name="logo"
+                        type="file"
+                        accept=".png,.jpg,.jpeg,.svg"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="urlTag">URLTag</Label>
+                      <Input
+                        id="urlTag"
+                        name="urlTag"
+                        type="text"
+                        placeholder="Enter URL column"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nameTag">NameTag</Label>
+                      <Input
+                        id="nameTag"
+                        name="nameTag"
+                        type="text"
+                        placeholder="Enter name column"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="url">URL or Text</Label>
+                    <Input
+                      id="url"
+                      name="url"
+                      type="text"
+                      placeholder="Enter URL or text for QR code"
+                      required
+                    />
+                  </div>
+                )}
                 <Button type="submit" className="w-full">
-                  Generate QR Codes
+                  Generate QR Code{user ? "s" : ""}
                 </Button>
                 {/* <SubmitButton /> */}
               </form>
@@ -413,9 +533,21 @@ export default function Home() {
                   <AlertDescription>
                     {result.success
                       ? (result.data.message as string)
-                    : result.error}
+                      : result.error}
                   </AlertDescription>
                 </Alert>
+              )}
+              {qrCodeImage && (
+                <div className="mt-4">
+                  <h2 className="text-xl font-semibold mb-2">
+                    Generated QR Code:
+                  </h2>
+                  <img
+                    src={qrCodeImage}
+                    alt="Generated QR Code"
+                    className="max-w-full h-auto"
+                  />
+                </div>
               )}
             </div>
             <div className="grid gap-4">
